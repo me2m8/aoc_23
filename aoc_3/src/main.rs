@@ -4,75 +4,80 @@ use std::fs::read_to_string;
 
 fn main() {
     let file = read_to_string("./input.txt").unwrap();
-    let rows: Vec<String> = file.lines().map(String::from).collect();
+    let rows: Vec<String> = file.lines()
+                                .map(String::from)
+                                .collect();
 
     let schematic: Vec<Vec<char>> = rows.iter()
-        .map(
-            |x| x.chars()
-                 .collect()
-        )
+        .map( |x| x.chars()
+        .collect() )
         .collect();
 
     let mut sum = 0;
 
     for y in 0..schematic.len() {
-        let mut x = 0;
+        let row = &schematic[y];
+        
+        for x in 0..row.len() {
+            let c = row[x];
 
-        while x < schematic[y].len() {
-            let row = &schematic[y];
+            if c == '*' {
+                let mut adjacent_nums: Vec<(usize, usize)> = Vec::new();
 
-            let mut found_number = false;
-            while row[x].is_digit(10) {
-                
+                for i in 0..=2 {
 
-                if x + 1 != row.len() && !row[x + 1].is_digit(10) {
-                    for i in 0..2 {
-                        
-                        if y + i == 0 || y + i - 1 == schematic.len() { continue; }
-                        let y = y + i - 1;
+                    if y + i == 0 || y + i > schematic.len() { continue; }
+                    let y = y + i - 1;
 
-                        for j in 0..2 {
-                            
-                            if x + j == 0 || x + j - 1 == row.len() { continue; }
-                            let x = x + j - 1;
+                    let row = &schematic[y];
 
-                            let c = schematic[y][x];
-                            if !c.is_digit(10) && c != '.' {
-                                found_number = true;
+                    let mut x = x - 1;
+                    let mut walker = 0;
+
+                    while walker < 3 {
+                        if row[x + walker].is_digit(10) {
+                            loop {
+                                if x + walker == row.len() - 1 || !row[x + walker + 1].is_digit(10) {
+                                    println!("Walking...");
+                                    adjacent_nums.push((y, x + walker));
+                                    break;
+                                }
+
+                                walker += 1;
                             }
                         }
+                        walker += 1;
                     }
-                    break;
                 }
-                x += 1;
+                if adjacent_nums.len() == 2 {
+                   sum += parse_number(&schematic, adjacent_nums); 
+                }
             }
-
-            if found_number {
-                sum += parse_number(&schematic, y, x);
-            }
-
-            x += 1
         }
     }
     println!("{}", sum);
 }
 
-fn parse_number(schematic: &Vec<Vec<char>>, y: usize, mut x: usize) -> i32 {
-    /*
-    loop {
-        if x + 1 == schematic[y].len() { break; }
-        if !schematic[y][x + 1].is_digit(10) { break; }
-        x += 1;
+fn parse_number(schematic: &Vec<Vec<char>>, coords: Vec<(usize, usize)>) -> u32 {
+    let mut final_number = 1;
+
+    for pair in coords {
+        let y = pair.0;
+        let x = pair.1;
+
+        let mut number = 0; 
+        let mut num_length = 0; 
+
+        while schematic[y][x - num_length].is_digit(10) {
+            number += schematic[y][x - num_length].to_digit(10).unwrap() * 10_u32.pow(num_length as u32);
+            match x.checked_sub(num_length + 1) {
+                None => break,
+                Some(x) => num_length += 1,
+            }
+        }
+
+        final_number *= number;
     }
-    */
 
-    let mut number = 0;
-    let mut num_length = 0;
-
-    while schematic[y][x - num_length].is_digit(10) {
-        number += schematic[y][x - num_length].to_digit(10).unwrap() as i32 * (10_i32.pow(num_length as u32));
-        num_length += 1;
-    }
-
-    return dbg!(number) as i32;
+    return dbg!(final_number);
 }
